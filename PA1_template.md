@@ -1,20 +1,17 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
 
 
 ## Loading and preprocessing the data
-```{r loaddata}
+
+```r
 unzip("activity.zip")
 activities <- read.csv("activity.csv")
 ```
 As demonstrated above, the data comes in an archived (zip) format.  Unziping the archive will provide us with a CSV file that can easily be read.
 
 ## What is mean total number of steps taken per day?
-```{r calculatemeans,fig.width=11}
+
+```r
 #calculate means
 stepmean <- mean(activities[complete.cases(activities),"steps"])
 stepmedian <- median(activities[complete.cases(activities),"steps"])
@@ -22,28 +19,35 @@ stepmedian <- median(activities[complete.cases(activities),"steps"])
 hist(activities[complete.cases(activities),"steps"],main = "Histogram of Steps Taken Per Day",xlab="Steps Taken")
 ```
 
-The mean steps taken per day is: **`r stepmean`**  
-The median steps taken per day is: **`r stepmedian`**
+![](PA1_template_files/figure-html/calculatemeans-1.png) 
+
+The mean steps taken per day is: **37.3825996**  
+The median steps taken per day is: **0**
 
 ## What is the average daily activity pattern?
 
 To begin, the mean steps taken per interval must be calculated.
-```{r}
+
+```r
 averaged <- as.data.frame(tapply(activities$steps,activities$interval,mean,na.rm=TRUE))
 #Apply appropriate column names to the resulting data
 names(averaged)[1] <- "average"
 averaged$interval = rownames(averaged)
 ```
-```{r dailyactivityplot,fig.width=11}
+
+```r
 plot(averaged$interval,averaged$average,type="l", main="Average Daily Activity by Interval",xlab="Interval",ylab="Steps")
 ```
-```{r maximumAverage}
+
+![](PA1_template_files/figure-html/dailyactivityplot-1.png) 
+
+```r
 maxaverage <- averaged[which.max(averaged$average),]
 ```
-The maximum average of **`r as.numeric(maxaverage$average)`** steps was taken at interval **`r as.numeric(maxaverage$interval)`**
+The maximum average of **206.1698113** steps was taken at interval **835**
 
 ## Imputing missing values
-Our provided dataset has **`r length(activities[is.na(activities[,"steps"]), "steps"])`** missing values for `steps`
+Our provided dataset has **2304** missing values for `steps`
 
 To address the missing values, the interval averages calculated above will be substituted in.
 
@@ -54,7 +58,8 @@ To substitute the missing values:
 2. Find all entries in the `steps` column with a value of `NA` and replace them with the rounded value from the (newly merged) `average` column
 
 The code to accomplish this is:
-```{r mergedata}
+
+```r
 merged <- merge(x = activities, y = averaged, by = "interval", all = TRUE)
 merged[is.na(merged[,"steps"]), "steps"] <- round(merged[is.na(merged[,"steps"]), "average"])
 #fix the "average" column type
@@ -62,7 +67,8 @@ merged$average <- as.numeric(merged$average)
 ```
 
 As shown below, the histogram of the new dataset is largely unchanged from its original
-```{r recalculatemeans,fig.width=11}
+
+```r
 #re-calculate means
 stepmean2 <- mean(merged[,"steps"])
 stepmedian2 <- median(merged[,"steps"])
@@ -70,14 +76,17 @@ stepmedian2 <- median(merged[,"steps"])
 hist(merged[complete.cases(merged),"steps"],main = "Histogram of Steps Taken Per Day (With substituted data)",xlab="Steps Taken")
 ```
 
+![](PA1_template_files/figure-html/recalculatemeans-1.png) 
+
 With missing data substituted with the averages for their associated interval  
-The mean steps taken per day is: **`r stepmean2`** which represents a **`r round((1-(stepmean2 / stepmean)) * 100,4)`**% change.  
-The median steps taken per day is: **`r stepmedian2`** which represents a **`r round((1-(stepmean2 / stepmean)) * 100,4)`**% change.
+The mean steps taken per day is: **37.3806922** which represents a **0.0051**% change.  
+The median steps taken per day is: **0** which represents a **0.0051**% change.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
 Before ansewring this, a factor must be added to the dataset to determine if a date is a weekday or a weekend.
-```{r identifydays}
+
+```r
 daytype <- function(date) {
     if(weekdays(as.Date(date)) %in% c("Monday","Tuesday","Wednesday","Thursday","Friday")) {
         return("weekday")
@@ -88,10 +97,29 @@ daytype <- function(date) {
 merged$isweekday <- as.data.frame(do.call(rbind,lapply(merged[,"date"],daytype)))$V1
 #summarize the data
 library(dplyr)
+```
+
+```
+## 
+## Attaching package: 'dplyr'
+## 
+## The following object is masked from 'package:stats':
+## 
+##     filter
+## 
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+```
+
+```r
 summarized <- merged %>% group_by(interval,isweekday) %>% summarise_each(funs(mean))
 ```
-```{r plotweekdaysvsweekends, fig.width=11}
+
+```r
 library(lattice)
 xyplot(steps ~ interval|isweekday,data=summarized,type='b',xlab ="Interval",ylab="Steps")
 ```
+
+![](PA1_template_files/figure-html/plotweekdaysvsweekends-1.png) 
 Whilte the subject is reasonably active both during the week and on the weekends, it appears that there is a greater amount of activity in the mornings on the weekdays vs the weekend. 
